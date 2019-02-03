@@ -11,9 +11,10 @@ import dateutil.parser as dparser
 from google.auth import exceptions
 from googleapiclient import errors
 from googleapiclient.discovery import build
+from pyrotools import console
+from pyrotools.console import cprint, query_yes_no
 
 import constants
-import utils
 
 youtube = None
 try:
@@ -23,13 +24,13 @@ try:
         developerKey=constants.YOUTUBE_API_KEY
     )
 except exceptions.DefaultCredentialsError:
-    utils.cprint(constants.COLORS.BRIGHT_RED, "['API']['YOUTUBE_API_KEY'] needs to be set in config.ini \n "
-                                              "https://docs.python.org/3.7/library/configparser.html#quick-start")
+    cprint(console.COLORS.BRIGHT_RED, "['API']['YOUTUBE_API_KEY'] needs to be set in config.ini \n "
+                                      "https://docs.python.org/3.7/library/configparser.html#quick-start")
     exit(-1)
 except errors.HttpError:
-    utils.cprint(constants.COLORS.BRIGHT_RED,
-                 "['API']['YOUTUBE_API_KEY'] in config.ini returned a Bad Request. This means it's invalid or you "
-                 "have internet problems.")
+    cprint(console.COLORS.BRIGHT_RED,
+           "['API']['YOUTUBE_API_KEY'] in config.ini returned a Bad Request. This means it's invalid or you "
+           "have internet problems.")
     exit(-2)
 
 for filepath in glob(join(constants.SCRAPING_FOLDER, "*.*")):
@@ -45,8 +46,8 @@ for filepath in glob(join(constants.SCRAPING_FOLDER, "*.*")):
         video_title = filename
         video_id = ""
 
-    utils.cprint(constants.COLORS.BRIGHT_BLUE, "Video title:", '"' + video_title + '"', "...")
-    utils.cprint(constants.COLORS.BRIGHT_BLUE, "Video id:", '"' + video_id + '"', "...")
+    cprint(console.COLORS.BRIGHT_BLUE, "Video title:", '"' + video_title + '"', "...")
+    cprint(console.COLORS.BRIGHT_BLUE, "Video id:", '"' + video_id + '"', "...")
 
     hashed_video_title = re.sub(constants.REGEXES.ALPHANUM_FILTER, "", video_title).lower()
 
@@ -58,9 +59,9 @@ for filepath in glob(join(constants.SCRAPING_FOLDER, "*.*")):
             maxResults=constants.MAX_RESULTS
         ).execute()
     except errors.HttpError as err:
-        # utils.cprint(constants.COLORS.BRIGHT_RED, err.content.message)
+        # cprint(console.COLORS.BRIGHT_RED, err.content.message)
         bob = json.decoder.JSONDecoder()
-        utils.cprint(constants.COLORS.BRIGHT_RED, err)
+        cprint(console.COLORS.BRIGHT_RED, err)
         exit(-3)
 
     highest_score = 0
@@ -72,7 +73,7 @@ for filepath in glob(join(constants.SCRAPING_FOLDER, "*.*")):
         search_result_title = search_result['snippet']['title']
         search_result_id = search_result['id']['videoId']
         search_result_date = search_result['snippet']['publishedAt']
-        utils.cprint(constants.COLORS.BRIGHT_YELLOW, "Scraped Video Title:", search_result_title)
+        cprint(console.COLORS.BRIGHT_YELLOW, "Scraped Video Title:", search_result_title)
 
         pprint(search_result_id)
 
@@ -93,20 +94,20 @@ for filepath in glob(join(constants.SCRAPING_FOLDER, "*.*")):
             highest_score_search_id = search_result['id']['videoId']
 
     if highest_score > 0:
-        utils.cprint(constants.COLORS.BRIGHT_GREEN, "Closest scraped video title:", highest_score_search_result_title)
+        cprint(console.COLORS.BRIGHT_GREEN, "Closest scraped video title:", highest_score_search_result_title)
         print("Score:", highest_score)
         print("Video id:", highest_score_search_id)
 
         if highest_score < constants.AUTO_IGNORING_MAX_SCORE:
-            utils.cprint(constants.COLORS.BRIGHT_CYAN, "Skipping video, cannot find good match")
-        elif highest_score >= constants.AUTO_RENAMING_MIN_SCORE or utils.query_yes_no("Is this the correct video?"):
+            cprint(console.COLORS.BRIGHT_CYAN, "Skipping video, cannot find good match")
+        elif highest_score >= constants.AUTO_RENAMING_MIN_SCORE or query_yes_no("Is this the correct video?"):
             course_date = dparser.parse(highest_score_search_result_date).strftime("%Y-%m-%d %H-%M-%S ")
             new_folder_name = os.path.join(constants.SCRAPING_FOLDER, course_date + filename + extension)
             print(new_folder_name)
             old_folder_name = os.path.join(constants.SCRAPING_FOLDER, filename + extension)
             os.rename(old_folder_name, new_folder_name)
     else:
-        utils.cprint(constants.COLORS.BRIGHT_RED, "No video results could be scraped")
+        cprint(console.COLORS.BRIGHT_RED, "No video results could be scraped")
 
     print("---------------------------------------")
     sleep(constants.API_DELAY_BETWEEN_REQUESTS)
